@@ -69,7 +69,7 @@ public class MainActivity extends Activity
 					if(extras!=null) {
 						final String ext = extras.getString(Intent.EXTRA_TEXT);
 						try{
-							TimeUnit.SECONDS.sleep(5);
+							TimeUnit.SECONDS.sleep(3);
 						}
 						catch (InterruptedException e){
 							e.printStackTrace();
