@@ -422,8 +422,10 @@ class logFile{
 			log=ctx.openFileInput("Log.txt");
 			BufferedReader reader = new BufferedReader( new InputStreamReader( log , "UTF-8") );
 			String tmp;
+			int i = 0;
 			while( (tmp = reader.readLine()) != null ){
-				str = str + tmp + "\n";
+				i++;
+				str = str + i + " : " + tmp + "\n";
 			}
 			reader.close();
 		}catch(IOException e){
