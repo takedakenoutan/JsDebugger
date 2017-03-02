@@ -41,6 +41,13 @@
 				android:onClick="Del"
 				android:id="@+id/delButton"/>
 
+			<Button
+				android:layout_height="wrap_content"
+				android:layout_width="wrap_content"
+				android:text="Debug"
+				android:id="@+id/intentDebug"
+				android:onClick="intentDebugger"/>
+
 		</LinearLayout>
 
 	</LinearLayout>

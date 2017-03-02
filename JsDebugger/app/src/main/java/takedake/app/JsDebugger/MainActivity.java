@@ -1,4 +1,4 @@
-package takedake.app;
+package takedake.app.JsDebugger;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -19,6 +19,7 @@ import android.widget.AdapterView;
 import android.widget.Spinner;
 import android.content.Context;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.BufferedReader;
@@ -34,6 +35,7 @@ import android.content.ClipDescription;
 import android.content.Intent;
 import android.support.v4.app.ShareCompat;
 import java.util.concurrent.TimeUnit;
+import java.net.URLDecoder;
 
 public class MainActivity extends Activity 
 {
@@ -48,7 +50,12 @@ public class MainActivity extends Activity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setMain();
+		
+		setMain();
+		
+		Intent splash = new Intent();
+		splash.setClassName("takedake.app.JsDebugger", "takedake.app.JsDebugger.Splash");
+		startActivity(splash);
 		
 		final Handler handler=new Handler();
 		
@@ -62,7 +69,7 @@ public class MainActivity extends Activity
 		Intent intent = getIntent();
 		String action = intent.getAction();
 		if (action.equals(Intent.ACTION_SEND)){
-			Thread Receive=new Thread(new Runnable(){
+			new Thread(new Runnable(){
 				@Override
 				public void run(){
 					Bundle extras = getIntent().getExtras();
@@ -83,8 +90,47 @@ public class MainActivity extends Activity
 						});
 					}
 				}
-			});
-			Receive.start();
+			}).start();
+		}
+		if (action.equals(Intent.ACTION_VIEW)){
+			String pathCache = "";
+			try{
+				pathCache = URLDecoder.decode((intent.getDataString().split("//"))[1], "UTF-8");
+			}
+			catch (UnsupportedEncodingException e){
+				e.printStackTrace();
+			}
+			final String path = pathCache;
+			new Thread(new Runnable(){
+				@Override
+				public void run(){
+					String text ="";
+					try{
+						BufferedReader reader = new BufferedReader( new InputStreamReader( new FileInputStream(path) , "UTF-8") );
+						String tmp;
+						while( (tmp = reader.readLine()) != null ){
+							text = text + tmp + "\n";
+						}
+						reader.close();
+					}catch(IOException e){
+						e.printStackTrace();
+					}
+					try{
+						TimeUnit.SECONDS.sleep(3);
+					}
+					catch (InterruptedException e){
+						e.printStackTrace();
+					}
+					final String str = text;
+					handler.post(new Runnable(){
+						@Override
+						public void run(){
+							receiver.Save(str);
+							myWeb.loadUrl("javascript:_takedake_app_JsDebugger.receive();");
+						}
+					});
+				}
+			}).start();
 		}
     }
 	@Override 
@@ -113,7 +159,7 @@ public class MainActivity extends Activity
 					text.setTypeface(font);
 				break;
 				case R.id.Share:
-					Toast.makeText(this, "ページ下部のShareボタンを押すかFavoriteに移動してください", Toast.LENGTH_LONG).show();
+					myWeb.loadUrl("javascript:_takedake_app_JsDebugger.sha();");
 				break;
 				case R.id.help:
 					myWeb.loadUrl("file:///android_asset/Help/index.html");
@@ -158,8 +204,7 @@ public class MainActivity extends Activity
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-		if(keyCode == KeyEvent.KEYCODE_BACK && viewState == "Debugger") {
-			myWeb.loadUrl("file:///android_asset/JsDebugger/index.html");
+		if(keyCode == KeyEvent.KEYCODE_BACK && viewState == "Debugger"){
 			return true;
 		}else if(keyCode == KeyEvent.KEYCODE_BACK && viewState != "Debugger"){
 			setMain();
@@ -195,13 +240,21 @@ public class MainActivity extends Activity
 	}
 	public void favWrite(){
 		String[] arr=this.fileList();
-		String[] item;
+		String[] _item;
 		if(Arrays.asList(arr).contains("Log.txt")){
 			List<String> temp=new ArrayList<>(Arrays.asList(arr));
 			temp.remove("Log.txt");
+			_item=temp.toArray(new String[0]);
+		}else{
+			_item=arr;
+		}
+		String[] item;
+		if(Arrays.asList(_item).contains("cache.txt")){
+			List<String> temp=new ArrayList<>(Arrays.asList(_item));
+			temp.remove("cache.txt");
 			item=temp.toArray(new String[0]);
 		}else{
-			item=arr;
+			item=_item;
 		}
 		ArrayAdapter adapter;
 		if(item.length!=0){
@@ -278,6 +331,33 @@ public class MainActivity extends Activity
 		ClipData cd = new ClipData(new ClipDescription("text_data", mimeType), txt);
 		ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 		cm.setPrimaryClip(cd);
+	}
+	public void intentDebugger(View view){
+		Spinner titleName = (Spinner)findViewById(R.id.titleName);
+		String item=(titleName.getSelectedItem()).toString();
+		final String code=favs.Load(item);
+		setMain();
+		setWeb(this, "file:///android_asset/JsDebugger/index.html");
+		final Handler handler=new Handler();
+		new Thread(new Runnable(){
+				@Override
+				public void run(){
+					try{
+						TimeUnit.MILLISECONDS.sleep(500);
+					}
+					catch (InterruptedException e){
+						e.printStackTrace();
+					}
+					handler.post(new Runnable(){
+						@Override
+						public void run(){
+							receiver.Save(code);
+							myWeb.loadUrl("javascript:_takedake_app_JsDebugger.receive();");
+						}
+					});
+				}
+			}).start();
+		
 	}
 	public void codes(){
 		String shareTitle="";
