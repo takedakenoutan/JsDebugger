@@ -17,6 +17,7 @@ import android.widget.Toast;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.content.Context;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -36,11 +37,14 @@ import android.content.Intent;
 import android.support.v4.app.ShareCompat;
 import java.util.concurrent.TimeUnit;
 import java.net.URLDecoder;
+import android.content.SharedPreferences;
+import android.widget.CompoundButton;
 
 public class MainActivity extends Activity 
 {
 	private WebView myWeb;
 	private String viewState;
+	private Boolean tabsChecked = false;
 	private logFile logs=new logFile(this);
 	private favFile favs=new favFile(this);
 	private codeShare share=new codeShare(this);
@@ -64,7 +68,25 @@ public class MainActivity extends Activity
 		myWeb.setWebChromeClient(new WebChromeClient());
 		myWeb.loadUrl("file:///android_asset/JsDebugger/index.html");
 		myWeb.getSettings().setJavaScriptEnabled(true);
-		myWeb.addJavascriptInterface(new JsFunction(this, logs, favs, share, receiver), "android");
+		myWeb.addJavascriptInterface(new JsFunction(logs, favs, share, receiver), "_takedake_app_JsDebugger_native");
+		
+		new Thread(new Runnable(){
+				@Override
+				public void run(){
+					try{
+						TimeUnit.MILLISECONDS.sleep(1200);
+					}catch(InterruptedException e){
+						e.printStackTrace();
+					}
+					handler.post(new Runnable(){
+							@Override
+							public void run(){
+								tabsChecked = getTabsChecked();
+								myWeb.loadUrl("javascript:_takedake_app_JsDebugger.setTabsChecked(" + tabsChecked + ");");
+							}
+						});
+				}
+			}).start();
 		
 		Intent intent = getIntent();
 		String action = intent.getAction();
@@ -76,9 +98,8 @@ public class MainActivity extends Activity
 					if(extras!=null) {
 						final String ext = extras.getString(Intent.EXTRA_TEXT);
 						try{
-							TimeUnit.SECONDS.sleep(3);
-						}
-						catch (InterruptedException e){
+							TimeUnit.MILLISECONDS.sleep(1200);
+						}catch(InterruptedException e){
 							e.printStackTrace();
 						}
 						handler.post(new Runnable(){
@@ -115,13 +136,12 @@ public class MainActivity extends Activity
 					}catch(IOException e){
 						e.printStackTrace();
 					}
+					final String str = text;
 					try{
-						TimeUnit.SECONDS.sleep(3);
-					}
-					catch (InterruptedException e){
+						TimeUnit.MILLISECONDS.sleep(1200);
+					}catch(InterruptedException e){
 						e.printStackTrace();
 					}
-					final String str = text;
 					handler.post(new Runnable(){
 						@Override
 						public void run(){
@@ -159,7 +179,10 @@ public class MainActivity extends Activity
 					text.setTypeface(font);
 				break;
 				case R.id.Share:
-					myWeb.loadUrl("javascript:_takedake_app_JsDebugger.sha();");
+					myWeb.loadUrl("javascript:_takedake_app_JsDebugger.share();");
+				break;
+				case R.id.Setting:
+					setSetting();
 				break;
 				case R.id.help:
 					myWeb.loadUrl("file:///android_asset/Help/index.html");
@@ -190,6 +213,9 @@ public class MainActivity extends Activity
 						Toast.makeText(this, "FavoriteかDebuggerに移動してください", Toast.LENGTH_LONG).show();
 					}
 				break;
+				case R.id.Setting:
+					setSetting();
+				break;
 				case R.id.help:
 					setMain();
 					setWeb(this, "file:///android_asset/Help/index.html");
@@ -197,16 +223,13 @@ public class MainActivity extends Activity
 				break;
 			}
 			logs.Delete();
-		}else if(viewState == "Favorite"){
 		}
 		return true;
 	}
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-		if(keyCode == KeyEvent.KEYCODE_BACK && viewState == "Debugger"){
-			return true;
-		}else if(keyCode == KeyEvent.KEYCODE_BACK && viewState != "Debugger"){
+		if(keyCode == KeyEvent.KEYCODE_BACK && viewState != "Debugger"){
 			setMain();
 			setWeb(this, "file:///android_asset/JsDebugger/index.html");
 			logs.Delete();
@@ -226,13 +249,36 @@ public class MainActivity extends Activity
 		setContentView(R.layout.fav);
 		viewState="Favorite";
 	}
+	public void setSetting(){
+		setContentView(R.layout.setting);
+		viewState="setting";
+		loadSetting();
+	}
 	public void setWeb(Activity self, String url){
 		myWeb = (WebView)findViewById(R.id.JeDebug);
 		myWeb.setWebViewClient(new WebViewClient());
 		myWeb.setWebChromeClient(new WebChromeClient());
 		myWeb.loadUrl(url);
 		myWeb.getSettings().setJavaScriptEnabled(true);
-		myWeb.addJavascriptInterface(new JsFunction(this, logs,favs, share, receiver), "android");
+		myWeb.addJavascriptInterface(new JsFunction(logs, favs, share, receiver), "_takedake_app_JsDebugger_native");
+		final Handler handler=new Handler();
+		new Thread(new Runnable(){
+			@Override
+			public void run(){
+				try{
+					TimeUnit.MILLISECONDS.sleep(1200);
+				}catch(InterruptedException e){
+					e.printStackTrace();
+				}
+				handler.post(new Runnable(){
+					@Override
+					public void run(){
+						tabsChecked = getTabsChecked();
+						myWeb.loadUrl("javascript:_takedake_app_JsDebugger.setTabsChecked(" + tabsChecked + ");");
+					}
+				});
+			}
+		}).start();
 	}
 	public void logWrite(String logStr){
 		TextView text = (TextView)findViewById(R.id.logView);
@@ -367,17 +413,40 @@ public class MainActivity extends Activity
 		shareText=favs.Load(shareTitle);
 		share.call(shareTitle + "\n\n" + shareText);
 	}
+	public void loadSetting(){
+		SharedPreferences tab = getSharedPreferences("tab", this.MODE_PRIVATE);
+		Boolean tabs = tab.getBoolean("tab", false);
+		Switch swichTab = (Switch)findViewById(R.id.tab);
+		swichTab.setChecked(tabs);
+		swichTab.setOnCheckedChangeListener(new Switch.OnCheckedChangeListener(){
+			@Override
+			public void onCheckedChanged(CompoundButton view, boolean isChecked){
+				switch(view.getId()){
+					case R.id.tab :
+						tabsChecked = isChecked;
+						SharedPreferences tab = getSharedPreferences("tab", MainActivity.this.MODE_PRIVATE);
+						SharedPreferences.Editor editor = tab.edit();
+						editor.putBoolean("tab", isChecked);
+						editor.apply();
+					break;
+				}
+			}
+		});
+	}
+	public boolean getTabsChecked(){
+		SharedPreferences tab = getSharedPreferences("tab", this.MODE_PRIVATE);
+		Boolean tabs = tab.getBoolean("tab", false);
+		return tabs;
+	}
 }
 
 class JsFunction{
-	private Context ctx;
 	private logFile logs;
 	private favFile favs;
 	private codeShare share;
 	private intentReceiver receiver;
 	
-	public JsFunction(Context c, logFile logObj, favFile favObj, codeShare codeObj, intentReceiver receiveObj){
-		ctx=c;
+	public JsFunction(logFile logObj, favFile favObj, codeShare codeObj, intentReceiver receiveObj){
 		logs=logObj;
 		favs=favObj;
 		share=codeObj;
@@ -425,7 +494,7 @@ class logFile{
 			int i = 0;
 			while( (tmp = reader.readLine()) != null ){
 				i++;
-				str = str + i + " : " + tmp + "\n";
+				str = str + i + " |   " + tmp + "\n";
 			}
 			reader.close();
 		}catch(IOException e){

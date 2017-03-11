@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.ImageView;
-import android.view.animation.*;
-import android.view.*;
+import android.view.animation.AlphaAnimation;
+import android.view.KeyEvent;
 
 public class Splash extends Activity
 {
@@ -18,7 +18,7 @@ public class Splash extends Activity
 		
 		ImageView splashImage = (ImageView)findViewById(R.id.splashImage);
 		AlphaAnimation alpha = new AlphaAnimation(0, 1);
-		alpha.setDuration(2700);
+		alpha.setDuration(1000);
 		splashImage.startAnimation(alpha);
 		
 		Handler handler = new Handler();
@@ -27,7 +27,7 @@ public class Splash extends Activity
 			public void run(){
 				finish();
 			}
-		}, 3 * 1000);
+		}, 1300);
 	}
 
 	@Override

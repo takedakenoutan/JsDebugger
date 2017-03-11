@@ -16,6 +16,10 @@
 		android:id="@+id/Share"
 		android:showAsAction="ifRoom"
 		android:title="Share"/>
+	<item
+		android:id="@+id/Setting"
+		android:showAsAction="never"
+		android:title="Setting"/>
 	<item 
 		android:id="@+id/help"
 		android:showAsAction="never" 
